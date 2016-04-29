@@ -19,19 +19,10 @@
  */
 package com.adobe.acs.commons.email;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
-import java.io.FileInputStream;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import javax.jcr.Session;
-
+import com.adobe.acs.commons.email.impl.EmailServiceImpl;
+import com.day.cq.commons.mail.MailTemplate;
+import com.day.cq.mailer.MessageGateway;
+import com.day.cq.mailer.MessageGatewayService;
 import org.apache.commons.mail.SimpleEmail;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceResolverFactory;
@@ -50,10 +41,18 @@ import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
-import com.adobe.acs.commons.email.impl.EmailServiceImpl;
-import com.day.cq.commons.mail.MailTemplate;
-import com.day.cq.mailer.MessageGateway;
-import com.day.cq.mailer.MessageGatewayService;
+import javax.jcr.Session;
+import java.io.File;
+import java.io.FileInputStream;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest(MailTemplate.class)
@@ -91,7 +90,7 @@ public class EmailServiceImplTest {
         when(resourceResolverFactory.getAdministrativeResourceResolver(null)).thenReturn(resourceResolver);
         when(resourceResolver.adaptTo(Session.class)).thenReturn(session);
 
-        emailTemplatePath = this.getClass().getResource("/emailTemplate.txt").getFile().toString();
+        emailTemplatePath = new File(this.getClass().getResource("/emailTemplate.txt").toURI()).getPath();
 
         // Mock the Mail Template
         PowerMockito.mockStatic(MailTemplate.class);
@@ -185,7 +184,7 @@ public class EmailServiceImplTest {
         final Map<String, String> params = new HashMap<String, String>();
         final String recipient =  "upasanac@acs.com";
         thrown.expect(IllegalArgumentException.class);
-        thrown.expectMessage("Template path is null or empty");
+        thrown.expectMessage("Mail template path [ null ] could not resolve to a valid template");
 
         emailService.sendEmail(templatePath, params, recipient);
      }
@@ -196,7 +195,7 @@ public class EmailServiceImplTest {
         final Map<String, String> params = new HashMap<String, String>();
         final String recipient =  "upasanac@acs.com";
         thrown.expect(IllegalArgumentException.class);
-        thrown.expectMessage("Error while creating template");
+        thrown.expectMessage("Mail template path [ /invalidTemplatePath.txt ] could not resolve to a valid template");
 
         emailService.sendEmail(templatePath, params, recipient);
      }

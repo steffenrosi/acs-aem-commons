@@ -25,9 +25,7 @@ import org.apache.sling.api.SlingHttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
 public class Command {
     private static final Logger log = LoggerFactory.getLogger(Command.class);
@@ -85,8 +83,8 @@ public class Command {
 
     public String toString() { return this.raw; }
 
-    public String[] getParams() { return this.params; }
+    public String[] getParams() { return Arrays.copyOf(this.params, this.params.length); }
 
-    public String[] getPunctuation() { return this.punctuation; }
+    public String[] getPunctuation() { return Arrays.copyOf(this.punctuation, this.punctuation.length); }
 
 }

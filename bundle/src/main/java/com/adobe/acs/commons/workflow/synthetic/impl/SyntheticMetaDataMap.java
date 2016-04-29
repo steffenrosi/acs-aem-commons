@@ -2,7 +2,7 @@
  * #%L
  * ACS AEM Commons Bundle
  * %%
- * Copyright (C) 2013 Adobe
+ * Copyright (C) 2015 Adobe
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -71,7 +71,7 @@ public class SyntheticMetaDataMap implements MetaDataMap {
 
     @Override
     public final boolean containsValue(final Object o) {
-        return this.containsValue(o);
+        return this.metaDataMap.containsValue(o);
     }
 
     @Override

@@ -47,7 +47,7 @@ import org.apache.felix.scr.annotations.Service;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.resource.Resource;
-import org.apache.sling.api.resource.ResourceUtil;
+import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.servlets.OptingServlet;
 import org.apache.sling.api.servlets.SlingSafeMethodsServlet;
@@ -61,6 +61,7 @@ import javax.imageio.ImageIO;
 import javax.jcr.RepositoryException;
 import javax.servlet.Servlet;
 import javax.servlet.ServletException;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -85,6 +86,13 @@ import java.util.regex.Pattern;
                         "foundation/components/image", "foundation/components/parbase", "foundation/components/page" },
                 propertyPrivate = false
         ),
+        @Property(
+            label = "Allows Suffix Patterns",
+            description = "Regex pattern to filter allowed file names. Defaults to [ "
+                    + NamedTransformImageServlet.DEFAULT_FILENAME_PATTERN + " ]",
+            name = NamedTransformImageServlet.NAMED_IMAGE_FILENAME_PATTERN,
+            value = NamedTransformImageServlet.DEFAULT_FILENAME_PATTERN
+		),
         @Property(
                 label = "Extension",
                 description = "",
@@ -114,18 +122,29 @@ import java.util.regex.Pattern;
 })
 @Service(Servlet.class)
 public class NamedTransformImageServlet extends SlingSafeMethodsServlet implements OptingServlet {
+
     private static final Logger log = LoggerFactory.getLogger(NamedTransformImageServlet.class);
+
+    public static final String NAME_IMAGE = "image";
+
+    public static final String NAMED_IMAGE_FILENAME_PATTERN = "acs.commons.namedimage.filename.pattern";
+
+    public static final String DEFAULT_FILENAME_PATTERN = "(image|img)\\.(.+)";
+
+    public static final String RT_LOCAL_SOCIAL_IMAGE = "social:asiFile";
+
+    public static final String RT_REMOTE_SOCIAL_IMAGE = "nt:adobesocialtype";
 
     @Reference
     private MimeTypeService mimeTypeService;
 
     private static final ValueMap EMPTY_PARAMS = new ValueMapDecorator(new LinkedHashMap<String, Object>());
 
-    private static final Pattern LAST_SUFFIX_PATTERN = Pattern.compile("(image|img)\\.(.+)");
-
     private static final String MIME_TYPE_PNG = "image/png";
 
     private static final String TYPE_QUALITY = "quality";
+
+    private Pattern lastSuffixPattern = Pattern.compile(DEFAULT_FILENAME_PATTERN);
 
     private Map<String, NamedImageTransformer> namedImageTransformers =
             new ConcurrentHashMap<String, NamedImageTransformer>();
@@ -172,7 +191,7 @@ public class NamedTransformImageServlet extends SlingSafeMethodsServlet implemen
         }
 
         final String lastSuffix = PathInfoUtil.getLastSuffixSegment(request);
-        final Matcher matcher = LAST_SUFFIX_PATTERN.matcher(lastSuffix);
+        final Matcher matcher = lastSuffixPattern.matcher(lastSuffix);
         if (!matcher.matches()) {
             return false;
         }
@@ -193,7 +212,12 @@ public class NamedTransformImageServlet extends SlingSafeMethodsServlet implemen
         final Image image = this.resolveImage(request);
         final String mimeType = this.getMimeType(request, image);
         Layer layer = this.getLayer(image);
-
+        
+        if (layer == null) {
+            response.setStatus(SlingHttpServletResponse.SC_NOT_FOUND);
+            return;
+        }
+        
         // Transform the image
         layer = this.transform(layer, imageTransformersWithParams);
 
@@ -295,8 +319,9 @@ public class NamedTransformImageServlet extends SlingSafeMethodsServlet implemen
      */
     protected final Image resolveImage(final SlingHttpServletRequest request) {
         final Resource resource = request.getResource();
+        final ResourceResolver resourceResolver = request.getResourceResolver();
 
-        final PageManager pageManager = request.getResourceResolver().adaptTo(PageManager.class);
+        final PageManager pageManager = resourceResolver.adaptTo(PageManager.class);
         final Page page = pageManager.getContainingPage(resource);
 
         if (DamUtil.isAsset(resource)) {
@@ -319,20 +344,29 @@ public class NamedTransformImageServlet extends SlingSafeMethodsServlet implemen
             return image;
 
         } else if (DamUtil.isRendition(resource)
-                || ResourceUtil.isA(resource, JcrConstants.NT_FILE)
-                || ResourceUtil.isA(resource, JcrConstants.NT_RESOURCE)) {
+                || resourceResolver.isResourceType(resource, JcrConstants.NT_FILE)
+                || resourceResolver.isResourceType(resource, JcrConstants.NT_RESOURCE)) {
             // For renditions; use the requested rendition
             final Image image = new Image(resource);
             image.set(Image.PN_REFERENCE, resource.getPath());
             return image;
 
         } else if (page != null) {
-            if (ResourceUtil.isA(resource, NameConstants.NT_PAGE)
+            if (resourceResolver.isResourceType(resource, NameConstants.NT_PAGE)
                     || StringUtils.equals(resource.getPath(), page.getContentResource().getPath())) {
                 // Is a Page or Page's Content Resource; use the Page's image resource
-                return new Image(page.getContentResource(), "image");
+                return new Image(page.getContentResource(), NAME_IMAGE);
             } else {
                 return new Image(resource);
+            }
+        } else {
+        	if (resourceResolver.isResourceType(resource, RT_LOCAL_SOCIAL_IMAGE)
+                    && resource.getValueMap().get("mimetype", StringUtils.EMPTY).startsWith("image/")) {
+                // Is a UGC image
+                return new SocialImageImpl(resource, NAME_IMAGE);
+            } else if (resourceResolver.isResourceType(resource, RT_REMOTE_SOCIAL_IMAGE)) {
+                // Is a UGC image
+                return new SocialRemoteImageImpl(resource, NAME_IMAGE);
             }
         }
 
@@ -435,6 +469,11 @@ public class NamedTransformImageServlet extends SlingSafeMethodsServlet implemen
     protected final void activate(final Map<String, String> properties) throws Exception {
         final String regex = PropertiesUtil.toString(properties.get(PROP_ASSET_RENDITION_PICKER_REGEX),
                 DEFAULT_ASSET_RENDITION_PICKER_REGEX);
+	    final String fileNameRegex = PropertiesUtil.toString(properties.get(NAMED_IMAGE_FILENAME_PATTERN),
+			    DEFAULT_FILENAME_PATTERN);
+	    if(StringUtils.isNotEmpty(fileNameRegex)) {
+		    lastSuffixPattern = Pattern.compile(fileNameRegex);
+	    }
         try {
             renditionPatternPicker = new RenditionPatternPicker(regex);
             log.info("Asset Rendition Pattern Picker: {}", regex);

@@ -2,7 +2,7 @@
  * #%L
  * ACS AEM Commons Bundle
  * %%
- * Copyright (C) 2013 Adobe
+ * Copyright (C) 2015 Adobe
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ public class SyntheticWorkflow implements Workflow {
 
     private final Date timeStarted;
 
-    private final WorkflowData workflowData;
+    private WorkflowData workflowData;
 
     private SyntheticWorkItem activeWorkItem;
 
@@ -99,7 +99,7 @@ public class SyntheticWorkflow implements Workflow {
 
     @Override
     public final Date getTimeStarted() {
-        return this.timeStarted;
+        return (Date) this.timeStarted.clone();
     }
 
     @Override
@@ -110,6 +110,10 @@ public class SyntheticWorkflow implements Workflow {
     @Override
     public final WorkflowData getWorkflowData() {
         return this.workflowData;
+    }
+
+    public final void setWorkflowData(final WorkflowData workflowData) {
+        this.workflowData = workflowData;
     }
 
     @Deprecated

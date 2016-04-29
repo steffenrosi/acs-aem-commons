@@ -22,14 +22,16 @@ package com.adobe.acs.commons.images.impl;
 
 import com.adobe.acs.commons.images.ImageTransformer;
 import com.adobe.acs.commons.images.NamedImageTransformer;
-import com.adobe.acs.commons.util.OsgiPropertyUtil;
+import com.adobe.acs.commons.util.ParameterUtil;
 import com.adobe.acs.commons.util.TypeUtil;
 import com.adobe.acs.commons.wcm.ComponentHelper;
 import com.day.image.Layer;
 import org.apache.commons.lang.StringUtils;
 import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
+import org.apache.felix.scr.annotations.ConfigurationPolicy;
 import org.apache.felix.scr.annotations.Property;
+import org.apache.felix.scr.annotations.Properties;
 import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.ReferenceCardinality;
 import org.apache.felix.scr.annotations.ReferencePolicy;
@@ -49,6 +51,7 @@ import java.util.Map;
         description = "Instances of this factory define registered Named Image transformers which are comprised of "
                 + "ordered, parameter-ized image transformers.",
         configurationFactory = true,
+        policy = ConfigurationPolicy.REQUIRE,
         metatype = true
 )
 @Reference(
@@ -58,6 +61,11 @@ import java.util.Map;
         cardinality = ReferenceCardinality.OPTIONAL_MULTIPLE
 )
 @Service
+@Properties({
+    @Property(
+            name = "webconsole.configurationFactory.nameHint",
+            value = "Transformer: {name}")
+})
 public class NamedImageTransformerImpl implements NamedImageTransformer {
     private static final Logger log = LoggerFactory.getLogger(NamedImageTransformerImpl.class);
 
@@ -92,18 +100,26 @@ public class NamedImageTransformerImpl implements NamedImageTransformer {
      */
     public final Layer transform(Layer layer) {
 
-        for (final String type : this.transforms.keySet()) {
-            final ImageTransformer imageTransformer = this.imageTransformers.get(type);
+        for (final Map.Entry<String, ValueMap> entry : this.transforms.entrySet()) {
+            final ImageTransformer imageTransformer = this.imageTransformers.get(entry.getKey());
             if (imageTransformer == null) {
                 log.warn("Skipping transform. Missing ImageTransformer for type: {}");
                 continue;
             }
 
-            final ValueMap transformParams = this.transforms.get(type);
+            final ValueMap transformParams = entry.getValue();
             layer = imageTransformer.transform(layer, transformParams);
         }
 
         return layer;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    @Override
+    public String getTransformName() {
+        return this.transformName;
     }
 
     public final Map<String, ValueMap> getImageTransforms() {
@@ -116,13 +132,13 @@ public class NamedImageTransformerImpl implements NamedImageTransformer {
 
         log.info("Registering Named Image Transformer: {}", this.transformName);
 
-        final Map<String, String> map = OsgiPropertyUtil.toMap(PropertiesUtil.toStringArray(
+        final Map<String, String> map = ParameterUtil.toMap(PropertiesUtil.toStringArray(
                 properties.get(PROP_TRANSFORMS), new String[]{}), ":", true, null);
 
 
         for (final Map.Entry<String, String> entry : map.entrySet()) {
             final String[] params = StringUtils.split(entry.getValue(), "&");
-            final Map<String, String> values = OsgiPropertyUtil.toMap(params, "=", true, null);
+            final Map<String, String> values = ParameterUtil.toMap(params, "=", true, null);
 
             log.debug("ImageTransform params for [ {} ] ~> {}", entry.getKey(), values);
 

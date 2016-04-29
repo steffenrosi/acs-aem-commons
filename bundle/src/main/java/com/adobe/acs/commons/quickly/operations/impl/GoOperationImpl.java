@@ -38,33 +38,27 @@ import org.apache.felix.scr.annotations.Service;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.resource.ResourceResolver;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@Component(
-        label = "ACS AEM Commons - Quickly - Go Operation"
-)
+/**
+ * ACS AEM Commons - Quickly - Go Operation
+ */
+@Component
 @Properties({
         @Property(
                 name = Operation.PROP_CMD,
-                value = GoOperationImpl.CMD,
-                propertyPrivate = true
+                value = GoOperationImpl.CMD
         ),
         @Property(
                 name = Operation.PROP_DESCRIPTION,
-                value = "Go straight to specific consoles in AEM",
-                propertyPrivate = true
+                value = "Go straight to specific consoles in AEM"
         )
 })
 @Service
 public class GoOperationImpl extends AbstractOperation {
     public static final String CMD = "go";
-
-    private static final Logger log = LoggerFactory.getLogger(GoOperationImpl.class);
-
 
     @Override
     public boolean accepts(final SlingHttpServletRequest request,
@@ -114,7 +108,7 @@ public class GoOperationImpl extends AbstractOperation {
 
         shortcuts.addAll(new ClassicConsoleResults().getResults(resourceResolver));
         shortcuts.addAll(new TouchConsoleResults().getResults(resourceResolver));
-        shortcuts.addAll(new DevConsoleResults().getResults());
+        shortcuts.addAll(DevConsoleResults.getResults());
         shortcuts.addAll(new OpsConsoleResults().getResults());
         shortcuts.addAll(new ACSToolsResults().getResults(resourceResolver));
 

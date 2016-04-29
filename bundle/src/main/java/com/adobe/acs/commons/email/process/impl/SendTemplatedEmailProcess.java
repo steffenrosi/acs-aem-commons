@@ -30,7 +30,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Deactivate;
-import org.apache.felix.scr.annotations.Properties;
 import org.apache.felix.scr.annotations.Property;
 import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.Service;
@@ -73,9 +72,9 @@ import com.day.cq.workflow.metadata.MetaDataMap;
  * Implementing classes can also add additional parameters by overriding the
  * {@link com.adobe.acs.commons.email.process.impl.SendTemplatedEmailProcess#getAdditionalParams(WorkItem, WorkflowSession, Resource)
  * getAdditionalParams() - method}
- * <p/>
- * <p/>
- * <p/>
+ * <p>
+ * <p>
+ * <p>
  * <b>Process Configuration</b> This process supports the following
  * configuration arguments:
  * <dl>
@@ -94,8 +93,8 @@ import com.day.cq.workflow.metadata.MetaDataMap;
  * </dl>
  * 
  */
-@Component(label = "ACS AEM Commons - Workflow Process - Send Templated Email Workflow Process", description = "Uses the Email Service api to send an email based on workflow arguments")
-@Properties({ @Property(label = "Workflow Label", name = "process.label", value = "Send Templated Email", description = "Sends a templated email using the ACS Commons Email Service") })
+@Component
+@Property(label = "Workflow Label", name = "process.label", value = "Send Templated Email", description = "Sends a templated email using the ACS Commons Email Service")
 @Service
 public class SendTemplatedEmailProcess implements WorkflowProcess {
 
@@ -258,7 +257,9 @@ public class SendTemplatedEmailProcess implements WorkflowProcess {
      * {@link com.adobe.acs.commons.email.process.impl.SendTemplatedEmailConstants#WF_MODEL_TITLE
      * WF_MODEL_TITLE} and adds the Workflow Step Title:
      * {@link com.adobe.acs.commons.email.process.impl.SendTemplatedEmailConstants#WF_STEP_TITLE
-     * WF_STEP_TITLE} Protected so that implementing classes can override and
+     * WF_STEP_TITLE}
+     * {@link com.adobe.acs.commons.email.process.impl.SendTemplatedEmailConstants#WF_INITIATOR
+     * WF_INITIATOR} Protected so that implementing classes can override and
      * add additional parameters.
      * 
      * @param workItem
@@ -275,6 +276,8 @@ public class SendTemplatedEmailProcess implements WorkflowProcess {
             wfParams.put(SendTemplatedEmailConstants.WF_STEP_TITLE, workItem.getNode().getTitle());
             wfParams.put(SendTemplatedEmailConstants.WF_MODEL_TITLE, workItem.getWorkflow().getWorkflowModel()
                     .getTitle());
+            // Set workflow initiator
+            wfParams.put(SendTemplatedEmailConstants.WF_INITIATOR, workItem.getWorkflow().getInitiator());
         } catch (Exception e) {
             log.warn("Error getting workflow title and workflow step title {}", e);
         }

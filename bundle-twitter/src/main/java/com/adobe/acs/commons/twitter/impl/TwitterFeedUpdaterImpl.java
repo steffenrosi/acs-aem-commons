@@ -38,7 +38,6 @@ import org.apache.sling.api.resource.ModifiableValueMap;
 import org.apache.sling.api.resource.PersistenceException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
-import org.apache.sling.api.resource.ResourceUtil;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.commons.osgi.PropertiesUtil;
 import org.osgi.service.component.ComponentContext;
@@ -49,6 +48,7 @@ import twitter4j.Status;
 import twitter4j.Twitter;
 import twitter4j.TwitterException;
 import twitter4j.URLEntity;
+import twitter4j.json.DataObjectFactory;
 
 import com.day.cq.replication.ReplicationActionType;
 import com.day.cq.replication.ReplicationException;
@@ -95,7 +95,7 @@ public final class TwitterFeedUpdaterImpl implements TwitterFeedUpdater {
                 Twitter client = page.adaptTo(Twitter.class);
                 if (client != null) {
                     try {
-                        ValueMap properties = ResourceUtil.getValueMap(twitterResource);
+                        ValueMap properties = twitterResource.getValueMap();
                         String username = properties.get("username", String.class);
 
                         if (!StringUtils.isEmpty(username)) {
@@ -107,14 +107,17 @@ public final class TwitterFeedUpdaterImpl implements TwitterFeedUpdater {
 
                             if (statuses != null) {
                                 List<String> tweetsList = new ArrayList<String>(statuses.size());
+                                List<String> jsonList = new ArrayList<String>(statuses.size());
 
                                 for (Status status : statuses) {
                                     tweetsList.add(processTweet(status));
+                                    jsonList.add(DataObjectFactory.getRawJSON(status));
                                 }
 
                                 if (tweetsList.size() > 0) {
                                     ModifiableValueMap map = twitterResource.adaptTo(ModifiableValueMap.class);
                                     map.put("tweets", tweetsList.toArray(new String[tweetsList.size()]));
+                                    map.put("tweetsJson", jsonList.toArray(new String[jsonList.size()]));
                                     twitterResource.getResourceResolver().commit();
 
                                     handleReplication(pageManager, twitterResource);
@@ -131,6 +134,8 @@ public final class TwitterFeedUpdaterImpl implements TwitterFeedUpdater {
                         log.error("Exception while loading twitter feed on resource:" + twitterResource.getPath(),
                                 e);
                     }
+                } else {
+                    log.warn("Twitter component found on {}, but page cannot be adapted to Twitter API. Check Cloud SErvice configuration", page.getPath());
                 }
             }
 
@@ -186,7 +191,7 @@ public final class TwitterFeedUpdaterImpl implements TwitterFeedUpdater {
     }
 
     private boolean isReplicationEnabled(Resource twitterResource) {
-        ValueMap properties = ResourceUtil.getValueMap(twitterResource);
+        ValueMap properties = twitterResource.getValueMap();
         return properties.get("replicate", false);
     }
 

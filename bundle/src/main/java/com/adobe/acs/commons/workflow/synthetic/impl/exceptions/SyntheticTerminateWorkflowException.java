@@ -2,7 +2,7 @@
  * #%L
  * ACS AEM Commons Bundle
  * %%
- * Copyright (C) 2013 Adobe
+ * Copyright (C) 2015 Adobe
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ package com.adobe.acs.commons.workflow.synthetic.impl.exceptions;
 
 import com.day.cq.workflow.WorkflowException;
 
+@SuppressWarnings("serial")
 public class SyntheticTerminateWorkflowException extends WorkflowException {
 
     public SyntheticTerminateWorkflowException(String message) {
